@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VALORANT // VANGUARD SYSTEM</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Roboto:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --val-red: #ff4655; --val-dark: #0f1923; --val-white: #ece8e1; }
+        body { 
+            background: linear-gradient(rgba(15, 25, 35, 0.75), rgba(15, 25, 35, 0.75)), 
+                        url('https://wallpaperaccess.com/full/3153572.jpg'); 
+            background-size: cover; background-position: center;
+            color: var(--val-white); font-family: 'Roboto', sans-serif;
+            margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .container { z-index: 2; text-align: left; width: 85%; max-width: 1200px; position: relative; }
+        h1 { font-family: 'Oswald', sans-serif; font-size: 70px; margin: 0; text-transform: uppercase; line-height: 1; }
+        .red-text { color: var(--val-red); }
+        .upload-card {
+            background: rgba(15, 25, 35, 0.8); border-left: 5px solid var(--val-red);
+            padding: 40px; margin-top: 30px; backdrop-filter: blur(10px); width: 400px;
+        }
+        input[type="file"] { margin-bottom: 20px; border: 1px solid #444; padding: 12px; width: 100%; background: #000; color: white; }
+        button {
+            background: var(--val-red); color: white; padding: 15px 40px; border: none;
+            font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); width: 100%;
+        }
+        button:hover { background: white; color: var(--val-red); transform: translateY(-3px); }
+        
+        .agent-right {
+            position: absolute; right: 190px; bottom: 0px;
+            width: 800px; height: 800px; z-index: 200;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <p style="letter-spacing: 5px; font-weight: bold; color: var(--val-red); margin-bottom: 10px;">VANGUARD // PROTOCOL</p>
+    <h1>BE THE <span class="red-text">CHAMPION</span> <br> NOT THE <span class="red-text">CHEATER</span></h1>
+    
+    <div class="upload-card">
+        <h3 style="margin-top:0;">MATCH LOG ANALYZER</h3>
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="file" name="csv_file" accept=".csv" required>
+            <br>
+            <button type="submit">Initialize Scanning</button>
+        </form>
+    </div>
+</div>
+
+<model-viewer 
+    src="{{ url_for('static', filename='1.glb') }}" 
+    autoplay alt="3D Clove" auto-rotate camera-controls disable-zoom class="agent-right">
+</model-viewer>
+</body>
+</html>
