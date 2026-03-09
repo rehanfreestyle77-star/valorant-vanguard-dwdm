@@ -1,17 +1,18 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, make_response
 import sqlite3
 import pandas as pd
+from fpdf import FPDF
 import os
 
 app = Flask(__name__)
 
-# 1. Database Connection
+# 1. Database Connection (SQLite)
 def get_db_connection():
     conn = sqlite3.connect('valorant.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# 2. Tables Initialisation
+# 2. Initialize Tables
 def init_db():
     conn = get_db_connection()
     conn.execute('''CREATE TABLE IF NOT EXISTS dim_player 
@@ -50,12 +51,9 @@ def upload_file():
 @app.route('/dashboard')
 def dashboard():
     conn = get_db_connection()
-    # Data count nikalna chart ke liye
     total_players = conn.execute("SELECT COUNT(*) FROM fact_player_stats").fetchone()[0]
     total_banned = conn.execute("SELECT COUNT(*) FROM fact_player_stats WHERE is_cheater = 1").fetchone()[0]
-    
-    # Logic: Safe = Total - Banned
-    total_safe = total_players - total_banned
+    total_safe = total_players - total_banned # Logic for Pie Chart
     
     players = conn.execute("""
         SELECT p.player_name, p.current_rank, f.kills, f.headshot_percentage, f.is_cheater 
@@ -63,17 +61,13 @@ def dashboard():
         JOIN dim_player p ON f.player_id = p.player_id
         ORDER BY f.is_cheater DESC
     """).fetchall()
-    
     conn.close()
-    return render_template('dashboard.html', 
-                           total_players=total_players, 
-                           total_banned=total_banned, 
-                           total_safe=total_safe, 
-                           players=players)
+    return render_template('dashboard.html', total_players=total_players, total_banned=total_banned, total_safe=total_safe, players=players)
 
 @app.route('/run-mining')
 def run_mining():
     conn = get_db_connection()
+    # Data Mining Logic: Detection of Anomalies
     conn.execute("""
         UPDATE fact_player_stats 
         SET is_cheater = 1 
@@ -83,6 +77,43 @@ def run_mining():
     conn.commit()
     conn.close()
     return redirect(url_for('dashboard', mining='success'))
+
+@app.route('/download-report')
+def download_report():
+    conn = get_db_connection()
+    players = conn.execute("""
+        SELECT p.player_name, p.current_rank, f.kills, f.headshot_percentage 
+        FROM fact_player_stats f 
+        JOIN dim_player p ON f.player_id = p.player_id
+        WHERE f.is_cheater = 1
+    """).fetchall()
+    conn.close()
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt="VANGUARD // THREAT DETECTION REPORT", ln=True, align='C')
+    pdf.ln(10)
+
+    # Table Header
+    pdf.set_fill_color(255, 70, 85) 
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(60, 10, "Player Name", 1, 0, 'C', True)
+    pdf.cell(40, 10, "Rank", 1, 0, 'C', True)
+    pdf.cell(30, 10, "Kills", 1, 0, 'C', True)
+    pdf.cell(30, 10, "HS%", 1, 1, 'C', True)
+
+    pdf.set_text_color(0, 0, 0)
+    for row in players:
+        pdf.cell(60, 10, row['player_name'].upper(), 1)
+        pdf.cell(40, 10, row['current_rank'].upper(), 1)
+        pdf.cell(30, 10, str(row['kills']), 1)
+        pdf.cell(30, 10, f"{row['headshot_percentage']:.2f}%", 1, 1)
+
+    response = make_response(pdf.output(dest='S').encode('latin-1'))
+    response.headers.set('Content-Disposition', 'attachment', filename='Vanguard_Report.pdf')
+    response.headers.set('Content-Type', 'application/pdf')
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
