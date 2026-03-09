@@ -5,14 +5,13 @@ import os
 
 app = Flask(__name__)
 
-# 1. Database Connection (SQLite file-based hota hai)
+# 1. Database Connection
 def get_db_connection():
-    # Ye folder mein 'valorant.db' naam ki file bana dega
     conn = sqlite3.connect('valorant.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# 2. Tables Initialisation (Project start hote hi tables ban jayengi)
+# 2. Tables Initialisation
 def init_db():
     conn = get_db_connection()
     conn.execute('''CREATE TABLE IF NOT EXISTS dim_player 
@@ -35,7 +34,6 @@ def upload_file():
     if file:
         df = pd.read_csv(file)
         conn = get_db_connection()
-        # Purana data delete karna (ETL Process)
         conn.execute("DELETE FROM fact_player_stats")
         conn.execute("DELETE FROM dim_player")
         
@@ -52,10 +50,13 @@ def upload_file():
 @app.route('/dashboard')
 def dashboard():
     conn = get_db_connection()
+    # Data count nikalna chart ke liye
     total_players = conn.execute("SELECT COUNT(*) FROM fact_player_stats").fetchone()[0]
     total_banned = conn.execute("SELECT COUNT(*) FROM fact_player_stats WHERE is_cheater = 1").fetchone()[0]
     
-    # Joining tables for display
+    # Logic: Safe = Total - Banned
+    total_safe = total_players - total_banned
+    
     players = conn.execute("""
         SELECT p.player_name, p.current_rank, f.kills, f.headshot_percentage, f.is_cheater 
         FROM fact_player_stats f 
@@ -64,12 +65,15 @@ def dashboard():
     """).fetchall()
     
     conn.close()
-    return render_template('dashboard.html', total_players=total_players, total_banned=total_banned, players=players)
+    return render_template('dashboard.html', 
+                           total_players=total_players, 
+                           total_banned=total_banned, 
+                           total_safe=total_safe, 
+                           players=players)
 
 @app.route('/run-mining')
 def run_mining():
     conn = get_db_connection()
-    # Data Mining Logic
     conn.execute("""
         UPDATE fact_player_stats 
         SET is_cheater = 1 
